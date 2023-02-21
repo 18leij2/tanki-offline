@@ -51,6 +51,11 @@ int collision(int x1, int y1, int width1, int height1, int x2, int y2, int width
 #define MAGENTA COLOR(31,0,31)
 #define YELLOW  COLOR(31,31,0)
 
+#define TANKGREEN COLOR(2, 13, 2)
+#define TANKLIGHTGREEN COLOR(1, 25, 2)
+#define TANKWHEEL COLOR(5, 5, 5)
+#define TANKLIGHTWHEEL COLOR(9, 9, 9)
+
 // Mode 3 Drawing Functions
 #define setPixel(x, y, color) (videoBuffer[OFFSET(x, y, SCREENWIDTH)] = color)
 void drawRect(int x, int y, int width, int height, volatile unsigned short color);
@@ -78,6 +83,31 @@ extern unsigned short buttons; // Keeps track of buttons pressed in current fram
 #define BUTTON_PRESSED(key) (!(~(oldButtons) & (key)) && (~(buttons) & (key))) // Checks if a button is currently pressed and wasn't in the previous frame
 
 // DMA
-//typedef volatile struct
+typedef volatile struct {
+    volatile const void *src;
+    volatile void *dst;
+    volatile unsigned int cnt;
+} DMA;
+extern DMA *dma;
+
+#define DMA_DESTINATION_INCREMENT (0 << 21) // Increment destination (move "forwards" in memory)
+#define DMA_DESTINATION_DECREMENT (1 << 21) // Decrement destination (move "backwards" in memory)
+#define DMA_DESTINATION_FIXED     (2 << 21) // Keep destination fixed
+#define DMA_DESTINATION_RESET     (3 << 21) // Reset destination to beginning when repeating
+#define DMA_SOURCE_INCREMENT      (0 << 23) // Increment source (move "forwards" in memory)
+#define DMA_SOURCE_DECREMENT      (1 << 23) // Decrement source (move "backwards" in memory)
+#define DMA_SOURCE_FIXED          (2 << 23) // Keep source fixed
+#define DMA_REPEAT (1 << 25) // Repeats every time 
+#define DMA_16     (0 << 26) // Copy 2 bytes at a time
+#define DMA_32     (1 << 26) // Copy 4 bytes at a time
+#define DMA_AT_NOW     (0 << 28) // Start DMA immediately
+#define DMA_AT_VBLANK  (1 << 28) // Start DMA at VBlank
+#define DMA_AT_HBLANK  (2 << 28) // Start DMA at HBlank
+#define DMA_AT_REFRESH (3 << 28) // DMA1 and DMA2, refill FIFO once empty. DMA3, transfer starts at scaline==2 and repeats until scanline==162
+#define DMA_IRQ (1 << 30) // Request an interrupt once DMA is finished
+#define DMA_ON  (1 << 31) // Enable DMA!!!
+
+// Immediately begins a DMA transfer using parameters
+void DMANow(int channel, volatile const void *src, volatile void *dst, unsigned int cnt);
 
 #endif

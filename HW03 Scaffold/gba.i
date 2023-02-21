@@ -35,6 +35,18 @@ void drawString(int x, int y, char *str, unsigned short color);
 # 75 "gba.h"
 extern unsigned short oldButtons;
 extern unsigned short buttons;
+
+
+
+
+typedef volatile struct {
+    volatile const void *src;
+    volatile void *dst;
+    volatile unsigned int cnt;
+} DMA;
+extern DMA *dma;
+# 106 "gba.h"
+void DMANow(int channel, volatile const void *src, volatile void *dst, unsigned int cnt);
 # 2 "gba.c" 2
 # 1 "font.h" 1
 
@@ -46,18 +58,22 @@ volatile unsigned short *videoBuffer = (unsigned short *)0x6000000;
 
 
 void drawRect(int x, int y, int width, int height, unsigned short color) {
+
+
+
+
+
     for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            (videoBuffer[((y + i) * (240) + (x + j))] = color);
-        }
+        DMANow(3, &color, &videoBuffer[((y + i) * (240) + (x))], width | (2 << 23));
     }
 }
 
 
-void fillScreen(unsigned short color) {
-    for (int i = 0; i < 240 * 160; i++) {
-        videoBuffer[i] = color;
-    }
+void fillScreen(volatile unsigned short color) {
+
+
+
+    DMANow(3, &color, videoBuffer, 38400 | (2 << 23));
 }
 
 
@@ -87,4 +103,13 @@ void drawString(int x, int y, char *str, unsigned short color) {
         str++;
         x += 6;
     }
+}
+
+DMA *dma = (DMA *)0x040000B0;
+
+void DMANow(int channel, volatile const void *src, volatile void *dst, unsigned int cnt) {
+    dma[channel].cnt = 0;
+    dma[channel].src = src;
+    dma[channel].dst = dst;
+    dma[channel].cnt = (1 << 31) | (0 << 26) | cnt;
 }

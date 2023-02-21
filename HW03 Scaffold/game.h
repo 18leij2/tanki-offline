@@ -9,6 +9,8 @@ typedef struct {
     int yVelocity;
     int width;
     int height;
+    int lives;
+    int direction;
     unsigned short color;
 } PLAYER;
 
@@ -41,14 +43,16 @@ typedef struct {
 } BULLET;
 
 // constants
-#define ENEMYCOUNT 10
-#define BULLETCOUNT 40
+#define ENEMYCOUNT 5
+#define BULLETCOUNT 20
 
 // variables;
 extern PLAYER player;
 extern BULLET bullets[BULLETCOUNT];
 extern ENEMY enemies[ENEMYCOUNT];
 extern int score;
+extern int time;
+extern int lives;
 
 // function prototypes
 void initGame();
@@ -59,8 +63,11 @@ void updateGame();
 void updatePlayer();
 void updateEnemies(ENEMY* e);
 void updateBullets(BULLET* b);
+void drawStart();
 void drawGame();
 void drawPlayer();
 void drawEnemies(ENEMY* e);
 void drawBullets(BULLET* b);
+void drawLives();
+void drawTankIcon();
 void newEnemy();

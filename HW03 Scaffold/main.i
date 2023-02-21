@@ -27,14 +27,26 @@ void waitForVBlank();
 
 
 int collision(int x1, int y1, int width1, int height1, int x2, int y2, int width2, int height2);
-# 56 "gba.h"
+# 60 "gba.h"
 void drawRect(int x, int y, int width, int height, volatile unsigned short color);
 void fillScreen(volatile unsigned short color);
 void drawChar(int x, int y, char ch, unsigned short color);
 void drawString(int x, int y, char *str, unsigned short color);
-# 75 "gba.h"
+# 79 "gba.h"
 extern unsigned short oldButtons;
 extern unsigned short buttons;
+
+
+
+
+typedef volatile struct {
+    volatile const void *src;
+    volatile void *dst;
+    volatile unsigned int cnt;
+} DMA;
+extern DMA *dma;
+# 110 "gba.h"
+void DMANow(int channel, volatile const void *src, volatile void *dst, unsigned int cnt);
 # 2 "main.c" 2
 # 1 "game.h" 1
 
@@ -48,6 +60,7 @@ typedef struct {
     int yVelocity;
     int width;
     int height;
+    int lives;
     unsigned short color;
 } PLAYER;
 
@@ -85,9 +98,10 @@ typedef struct {
 
 
 extern PLAYER player;
-extern BULLET bullets[40];
-extern ENEMY enemies[10];
+extern BULLET bullets[20];
+extern ENEMY enemies[5];
 extern int score;
+extern int time;
 
 
 void initGame();
@@ -98,10 +112,13 @@ void updateGame();
 void updatePlayer();
 void updateEnemies(ENEMY* e);
 void updateBullets(BULLET* b);
+void drawStart();
 void drawGame();
 void drawPlayer();
 void drawEnemies(ENEMY* e);
 void drawBullets(BULLET* b);
+void drawHealth();
+void drawTankIcon();
 void newEnemy();
 # 3 "main.c" 2
 # 1 "print.h" 1
@@ -1349,21 +1366,120 @@ _putchar_unlocked(int _c)
 
 
 # 7 "main.c"
+void initialize();
+void goToStart();
+void start();
+void goToGame();
+void game();
+void goToPause();
+void pause();
+
 unsigned short oldButtons;
 unsigned short buttons;
 
-int test = 0;
+char buffer[41];
+
+enum {
+    START,
+    GAME,
+    PAUSE,
+    WIN,
+    LOSE
+};
+int state;
+
+int rSeed;
 
 int main() {
-    (*(volatile unsigned short *)0x4000000) = ((3) & 7) | (1 << (8 + (2 % 4)));
+    mgba_open();
+    mgba_printf("Debug log initialized!");
+
+    initialize();
 
     while (1) {
         oldButtons = buttons;
         buttons = (*(volatile unsigned short *)0x04000130);
 
-        if (test = 0) {
-            initGame();
-            test = 1;
+        switch (state) {
+            case START:
+                start();
+                break;
+            case GAME:
+                game();
+                break;
+            case PAUSE:
+                pause();
+                break;
+            case WIN:
+                break;
+            case LOSE:
+                break;
         }
+    }
+}
+
+void initialize() {
+    (*(volatile unsigned short *)0x4000000) = ((3) & 7) | (1 << (8 + (2 % 4)));
+
+
+
+    buttons = (*(volatile unsigned short *)0x04000130);
+    oldButtons = 0;
+
+    goToStart();
+}
+
+void goToStart() {
+    fillScreen(((15&31) | (15&31) << 5 | (15&31) << 10));
+
+    drawString(80, 75, "Tanki Offline", ((0&31) | (31&31) << 5 | (0&31) << 10));
+    drawString(59, 90, "Press Enter to Start", ((0&31) | (31&31) << 5 | (0&31) << 10));
+    state = START;
+    rSeed = 0;
+}
+
+void start() {
+    rSeed++;
+
+    waitForVBlank();
+    drawStart();
+    if ((!(~(oldButtons) & ((1<<3))) && (~(buttons) & ((1<<3))))) {
+        srand(rSeed);
+        goToGame();
+        initGame();
+    }
+}
+
+void goToGame() {
+    fillScreen(((15&31) | (15&31) << 5 | (15&31) << 10));
+    drawRect(0, 0, 240, 18, ((0&31) | (0&31) << 5 | (0&31) << 10));
+    drawChar(116, 5, '0', ((31&31) | (31&31) << 5 | (31&31) << 10));
+    state = GAME;
+}
+
+void game() {
+    updateGame();
+    sprintf(buffer, "%d", score);
+    waitForVBlank();
+    drawString(116, 5, buffer, ((31&31) | (31&31) << 5 | (31&31) << 10));
+
+    drawGame();
+
+    if ((!(~(oldButtons) & ((1<<3))) && (~(buttons) & ((1<<3))))) {
+        goToPause();
+    }
+}
+
+void goToPause() {
+    drawString(200, 5, "PAUSED", ((31&31) | (31&31) << 5 | (0&31) << 10));
+    state = PAUSE;
+}
+
+void pause() {
+    waitForVBlank();
+    if ((!(~(oldButtons) & ((1<<3))) && (~(buttons) & ((1<<3))))) {
+        state = GAME;
+    } else if ((!(~(oldButtons) & ((1<<2))) && (~(buttons) & ((1<<2))))) {
+        goToStart();
     }
 }

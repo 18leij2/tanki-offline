@@ -6,18 +6,22 @@ volatile unsigned short *videoBuffer = (unsigned short *)0x6000000;
 
 // Draws a rectangle in mode 3
 void drawRect(int x, int y, int width, int height, unsigned short color) {
+    // for (int i = 0; i < height; i++) {
+    //     for (int j = 0; j < width; j++) {
+    //         setPixel(x + j, y + i, color);
+    //     }
+    // }
     for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            setPixel(x + j, y + i, color);
-        }
+        DMANow(3, &color, &videoBuffer[OFFSET(x, y + i, 240)], width | DMA_SOURCE_FIXED);
     }
 }
 
 // Fills the screen in mode 3
-void fillScreen(unsigned short color) {
-    for (int i = 0; i < 240 * 160; i++) {
-        videoBuffer[i] = color;
-    }
+void fillScreen(volatile unsigned short color) {
+    // for (int i = 0; i < 240 * 160; i++) {
+    //     videoBuffer[i] = color;
+    // }
+    DMANow(3, &color, videoBuffer, 38400 | DMA_SOURCE_FIXED);
 }
 
 // Checks for collision between two rectangles
@@ -47,4 +51,13 @@ void drawString(int x, int y, char *str, unsigned short color) {
         str++;
         x += 6;
     }
+}
+
+DMA *dma = (DMA *)0x040000B0;
+
+void DMANow(int channel, volatile const void *src, volatile void *dst, unsigned int cnt) {
+    dma[channel].cnt = 0;
+    dma[channel].src = src;
+    dma[channel].dst = dst;
+    dma[channel].cnt = DMA_ON | DMA_16 | cnt;
 }
