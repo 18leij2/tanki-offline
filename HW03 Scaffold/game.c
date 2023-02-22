@@ -34,6 +34,7 @@ void initPlayer() {
     player.width = 11;
     player.lives = 3;
     player.direction = 0;
+    player.fired = 0;
     player.color = TANKWHEEL;
 }
 
@@ -44,6 +45,7 @@ void initEnemies() {
         enemies[i].width = 15;
         enemies[i].height = 10;
         enemies[i].active = 1;
+        enemies[i].fired = 0;
 
         int colorPicker = rand() % 3;
         switch (colorPicker) {
@@ -64,10 +66,15 @@ void initBullets() {
     for (int i; i < BULLETCOUNT; i++) {
         bullets[i].x = 10 + (i * 15);
         bullets[i].y = 100;
-        bullets[i].width = 15;
-        bullets[i].height = 10;
+        bullets[i].oldX = bullets[i].x;
+        bullets[i].oldY = bullets[i].y;
+        bullets[i].width = 3;
+        bullets[i].height = 3;
         bullets[i].active = 0;
-        bullets[i].color = RED;
+        bullets[i].direction = 0;
+        bullets[i].speed = 3;
+        bullets[i].playerBullet = 0;
+        bullets[i].color = TANKWHEEL;
     }
 }
 
@@ -111,7 +118,11 @@ void updatePlayer() {
             player.direction = 3;
         }
     }
-    mgba_printf("%d", player.direction);
+
+    if (BUTTON_PRESSED(BUTTON_A) && player.fired == 0) {
+        player.fired = 1;
+        newBullet(0);
+    }
 }
 
 void updateEnemies(ENEMY* e) {
@@ -122,7 +133,140 @@ void updateEnemies(ENEMY* e) {
 
 void updateBullets(BULLET* b) {
     if (b->active) {
+        switch (b->direction) {
+            case 0:
+                if (b->y - b->speed < 18) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->y -= b->speed;
+                }
+                break;
+            case 1:
+                if (b->x + b->width - 1 + b->speed - 1 > 239 || b->y - b->speed - 1 < 18) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->y -= b->speed - 1;
+                    b->x += b->speed - 1;
+                }
+                break;
+            case 2:
+                if (b->x + b->width - 1 + b->speed > 239) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->x += b->speed;
+                }
+                break;
+            case 3:
+                if (b->x + b->width - 1 + b->speed - 1 > 239 || b->y + b->height - 1 + b->speed - 1 > 159) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->x += b->speed - 1;
+                    b->y += b->speed - 1;
+                }
+                break;
+            case 4:
+                if (b->y +b->height - 1 + b->speed > 159) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->y += b->speed;
+                }
+                break;
+            case 5:
+                if (b->x - b->speed - 1 < 0 || b->y + b->height - 1 + b->speed - 1 > 159) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->x -= b->speed - 1;
+                    b->y += b->speed - 1;
+                }
+                break;
+            case 6:
+                if (b->x - b->speed < 0) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->x -= b->speed;
+                }
+                break;
+            case 7:
+                if (b->x - b->speed - 1 < 0 || b->y - b->speed - 1 < 18) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->x -= b->speed - 1;
+                    b->y -= b->speed - 1;
+                }
+                break;
+        }
+    }
+}
 
+void newBullet(int firer) {
+    for (int i = 0; i < BULLETCOUNT; i++) {
+        if (!bullets[i].active) {
+            bullets[i].active = 1;
+            bullets[i].erased = 0;
+            bullets[i].direction = player.direction;
+            if (!firer) {
+                bullets[i].playerBullet = 1;
+                switch (player.direction) {
+                    case 0:
+                        bullets[i].x = player.x + 4;
+                        bullets[i].y = player.y - 3;
+                        break;
+                    case 1:
+                        bullets[i].x = player.x + 10;
+                        bullets[i].y = player.y - 2;
+                        break;
+                    case 2:
+                        bullets[i].x = player.x + 11;
+                        bullets[i].y = player.y + 4;
+                        break;
+                    case 3:
+                        bullets[i].x = player.x + 10;
+                        bullets[i].y = player.y + 10;
+                        break;
+                    case 4:
+                        bullets[i].x = player.x + 4;
+                        bullets[i].y = player.y + 11;
+                        break;
+                    case 5:
+                        bullets[i].x = player.x - 2;
+                        bullets[i].y = player.y + 10;
+                        break;
+                    case 6:
+                        bullets[i].x = player.x - 3;
+                        bullets[i].y = player.y + 4;
+                        break;
+                    case 7:
+                        bullets[i].x = player.x - 2;
+                        bullets[i].y = player.y - 2;
+                        break;
+                } 
+            }
+            break;
+        }
     }
 }
 
@@ -158,7 +302,6 @@ void drawPlayer() {
             drawRect(player.x + 5, player.y, 1, 3, TANKLIGHTGREEN);
             break;
         case 1:
-            setPixel(player.x + 10, player.y, TANKLIGHTGREEN);
             setPixel(player.x + 9, player.y + 1, TANKLIGHTGREEN);
             setPixel(player.x + 8, player.y + 2, TANKLIGHTGREEN);
             break;
@@ -168,7 +311,6 @@ void drawPlayer() {
         case 3:
             setPixel(player.x + 8, player.y + 8, TANKLIGHTGREEN);
             setPixel(player.x + 9, player.y + 9, TANKLIGHTGREEN);
-            setPixel(player.x + 10, player.y + 10, TANKLIGHTGREEN);
             break;
         case 4:
             drawRect(player.x + 5, player.y + 8, 1, 3, TANKLIGHTGREEN);
@@ -176,7 +318,6 @@ void drawPlayer() {
         case 5:
             setPixel(player.x + 2, player.y + 8, TANKLIGHTGREEN);
             setPixel(player.x + 1, player.y + 9, TANKLIGHTGREEN);
-            setPixel(player.x, player.y + 10, TANKLIGHTGREEN);
             break;
         case 6:
             drawRect(player.x, player.y + 5, 3, 1, TANKLIGHTGREEN);
@@ -184,7 +325,6 @@ void drawPlayer() {
         case 7:
             setPixel(player.x + 2, player.y + 2, TANKLIGHTGREEN);
             setPixel(player.x + 1, player.y + 1, TANKLIGHTGREEN);
-            setPixel(player.x, player.y, TANKLIGHTGREEN);
             break;
     }
     player.oldX = player.x;
@@ -201,9 +341,13 @@ void drawEnemies(ENEMY* e) {
 
 void drawBullets(BULLET* b) {
     if (b->active) {
+        drawRect(b->oldX, b->oldY, b->width, b->height, GRAY);
         drawRect(b->x, b->y, b->width, b->height, b->color);
+        b->oldX = b->x;
+        b->oldY = b->y; 
     } else if (!b->erased) {
-
+        drawRect(b->x, b->y, b->width, b->height, GRAY);
+        b->erased = 1;
     }
 }
 

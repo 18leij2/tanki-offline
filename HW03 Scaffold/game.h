@@ -11,6 +11,7 @@ typedef struct {
     int height;
     int lives;
     int direction;
+    int fired;
     unsigned short color;
 } PLAYER;
 
@@ -23,6 +24,7 @@ typedef struct {
     int yVelocity;
     int width;
     int height;
+    int fired;
     unsigned short color;
     int active;
     int erased;
@@ -37,6 +39,9 @@ typedef struct {
     int yVelocity;
     int width;
     int height;
+    int direction;
+    int speed;
+    int playerBullet;
     unsigned short color;
     int active;
     int erased;
@@ -70,4 +75,4 @@ void drawEnemies(ENEMY* e);
 void drawBullets(BULLET* b);
 void drawLives();
 void drawTankIcon();
-void newEnemy();
+void newBullet();

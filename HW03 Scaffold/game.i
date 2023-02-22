@@ -62,6 +62,7 @@ typedef struct {
     int height;
     int lives;
     int direction;
+    int fired;
     unsigned short color;
 } PLAYER;
 
@@ -74,6 +75,7 @@ typedef struct {
     int yVelocity;
     int width;
     int height;
+    int fired;
     unsigned short color;
     int active;
     int erased;
@@ -88,6 +90,9 @@ typedef struct {
     int yVelocity;
     int width;
     int height;
+    int direction;
+    int speed;
+    int playerBullet;
     unsigned short color;
     int active;
     int erased;
@@ -121,7 +126,7 @@ void drawEnemies(ENEMY* e);
 void drawBullets(BULLET* b);
 void drawLives();
 void drawTankIcon();
-void newEnemy();
+void newBullet();
 # 3 "game.c" 2
 # 1 "/opt/devkitpro/devkitARM/arm-none-eabi/include/stdlib.h" 1 3
 # 10 "/opt/devkitpro/devkitARM/arm-none-eabi/include/stdlib.h" 3
@@ -967,6 +972,7 @@ void initPlayer() {
     player.width = 11;
     player.lives = 3;
     player.direction = 0;
+    player.fired = 0;
     player.color = ((5&31) | (5&31) << 5 | (5&31) << 10);
 }
 
@@ -977,6 +983,7 @@ void initEnemies() {
         enemies[i].width = 15;
         enemies[i].height = 10;
         enemies[i].active = 1;
+        enemies[i].fired = 0;
 
         int colorPicker = rand() % 3;
         switch (colorPicker) {
@@ -997,10 +1004,15 @@ void initBullets() {
     for (int i; i < 20; i++) {
         bullets[i].x = 10 + (i * 15);
         bullets[i].y = 100;
-        bullets[i].width = 15;
-        bullets[i].height = 10;
+        bullets[i].oldX = bullets[i].x;
+        bullets[i].oldY = bullets[i].y;
+        bullets[i].width = 3;
+        bullets[i].height = 3;
         bullets[i].active = 0;
-        bullets[i].color = ((31&31) | (0&31) << 5 | (0&31) << 10);
+        bullets[i].direction = 0;
+        bullets[i].speed = 3;
+        bullets[i].playerBullet = 0;
+        bullets[i].color = ((5&31) | (5&31) << 5 | (5&31) << 10);
     }
 }
 
@@ -1044,7 +1056,11 @@ void updatePlayer() {
             player.direction = 3;
         }
     }
-    mgba_printf("%d", player.direction);
+
+    if ((!(~(oldButtons) & ((1<<0))) && (~(buttons) & ((1<<0)))) && player.fired == 0) {
+        player.fired = 1;
+        newBullet(0);
+    }
 }
 
 void updateEnemies(ENEMY* e) {
@@ -1055,7 +1071,140 @@ void updateEnemies(ENEMY* e) {
 
 void updateBullets(BULLET* b) {
     if (b->active) {
+        switch (b->direction) {
+            case 0:
+                if (b->y - b->speed < 18) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->y -= b->speed;
+                }
+                break;
+            case 1:
+                if (b->x + b->width - 1 + b->speed - 1 > 239 || b->y - b->speed - 1 < 18) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->y -= b->speed - 1;
+                    b->x += b->speed - 1;
+                }
+                break;
+            case 2:
+                if (b->x + b->width - 1 + b->speed > 239) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->x += b->speed;
+                }
+                break;
+            case 3:
+                if (b->x + b->width - 1 + b->speed - 1 > 239 || b->y + b->height - 1 + b->speed - 1 > 159) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->x += b->speed - 1;
+                    b->y += b->speed - 1;
+                }
+                break;
+            case 4:
+                if (b->y +b->height - 1 + b->speed > 159) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->y += b->speed;
+                }
+                break;
+            case 5:
+                if (b->x - b->speed - 1 < 0 || b->y + b->height - 1 + b->speed - 1 > 159) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->x -= b->speed - 1;
+                    b->y += b->speed - 1;
+                }
+                break;
+            case 6:
+                if (b->x - b->speed < 0) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->x -= b->speed;
+                }
+                break;
+            case 7:
+                if (b->x - b->speed - 1 < 0 || b->y - b->speed - 1 < 18) {
+                    b->active = 0;
+                    if (b->playerBullet) {
+                        player.fired = 0;
+                    }
+                } else {
+                    b->x -= b->speed - 1;
+                    b->y -= b->speed - 1;
+                }
+                break;
+        }
+    }
+}
 
+void newBullet(int firer) {
+    for (int i = 0; i < 20; i++) {
+        if (!bullets[i].active) {
+            bullets[i].active = 1;
+            bullets[i].erased = 0;
+            bullets[i].direction = player.direction;
+            if (!firer) {
+                bullets[i].playerBullet = 1;
+                switch (player.direction) {
+                    case 0:
+                        bullets[i].x = player.x + 4;
+                        bullets[i].y = player.y - 3;
+                        break;
+                    case 1:
+                        bullets[i].x = player.x + 10;
+                        bullets[i].y = player.y - 2;
+                        break;
+                    case 2:
+                        bullets[i].x = player.x + 11;
+                        bullets[i].y = player.y + 4;
+                        break;
+                    case 3:
+                        bullets[i].x = player.x + 10;
+                        bullets[i].y = player.y + 10;
+                        break;
+                    case 4:
+                        bullets[i].x = player.x + 4;
+                        bullets[i].y = player.y + 11;
+                        break;
+                    case 5:
+                        bullets[i].x = player.x - 2;
+                        bullets[i].y = player.y + 10;
+                        break;
+                    case 6:
+                        bullets[i].x = player.x - 3;
+                        bullets[i].y = player.y + 4;
+                        break;
+                    case 7:
+                        bullets[i].x = player.x - 2;
+                        bullets[i].y = player.y - 2;
+                        break;
+                }
+            }
+            break;
+        }
     }
 }
 
@@ -1091,7 +1240,6 @@ void drawPlayer() {
             drawRect(player.x + 5, player.y, 1, 3, ((1&31) | (25&31) << 5 | (2&31) << 10));
             break;
         case 1:
-            (videoBuffer[((player.y) * (240) + (player.x + 10))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
             (videoBuffer[((player.y + 1) * (240) + (player.x + 9))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
             (videoBuffer[((player.y + 2) * (240) + (player.x + 8))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
             break;
@@ -1101,7 +1249,6 @@ void drawPlayer() {
         case 3:
             (videoBuffer[((player.y + 8) * (240) + (player.x + 8))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
             (videoBuffer[((player.y + 9) * (240) + (player.x + 9))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
-            (videoBuffer[((player.y + 10) * (240) + (player.x + 10))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
             break;
         case 4:
             drawRect(player.x + 5, player.y + 8, 1, 3, ((1&31) | (25&31) << 5 | (2&31) << 10));
@@ -1109,7 +1256,6 @@ void drawPlayer() {
         case 5:
             (videoBuffer[((player.y + 8) * (240) + (player.x + 2))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
             (videoBuffer[((player.y + 9) * (240) + (player.x + 1))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
-            (videoBuffer[((player.y + 10) * (240) + (player.x))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
             break;
         case 6:
             drawRect(player.x, player.y + 5, 3, 1, ((1&31) | (25&31) << 5 | (2&31) << 10));
@@ -1117,7 +1263,6 @@ void drawPlayer() {
         case 7:
             (videoBuffer[((player.y + 2) * (240) + (player.x + 2))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
             (videoBuffer[((player.y + 1) * (240) + (player.x + 1))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
-            (videoBuffer[((player.y) * (240) + (player.x))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
             break;
     }
     player.oldX = player.x;
@@ -1134,9 +1279,13 @@ void drawEnemies(ENEMY* e) {
 
 void drawBullets(BULLET* b) {
     if (b->active) {
+        drawRect(b->oldX, b->oldY, b->width, b->height, ((15&31) | (15&31) << 5 | (15&31) << 10));
         drawRect(b->x, b->y, b->width, b->height, b->color);
+        b->oldX = b->x;
+        b->oldY = b->y;
     } else if (!b->erased) {
-
+        drawRect(b->x, b->y, b->width, b->height, ((15&31) | (15&31) << 5 | (15&31) << 10));
+        b->erased = 1;
     }
 }
 
