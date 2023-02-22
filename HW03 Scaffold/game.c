@@ -9,9 +9,11 @@ ENEMY enemies[ENEMYCOUNT];
 
 // score
 int score;
-int spawned;
 int time;
+int damageTime;
 int lives;
+
+int powerupX, powerupY, powerupOldX, powerupOldY, powerupWidth, powerupHeight, powerupXVelocity, powerupYVelocity;
 
 // initialize
 void initGame() {
@@ -21,6 +23,15 @@ void initGame() {
     initEnemies();
     initBullets();
     lives = player.lives;
+
+    powerupX = 120;
+    powerupY = 120;
+    powerupOldX = powerupX;
+    powerupOldY = powerupY;
+    powerupWidth = 3;
+    powerupHeight = 3;
+    powerupXVelocity = 4;
+    powerupYVelocity = 4;
 }
 
 void initPlayer() {
@@ -33,8 +44,11 @@ void initPlayer() {
     player.height = 11;
     player.width = 11;
     player.lives = 3;
+    player.iframes = 0;
     player.direction = 0;
     player.fired = 0;
+    player.powered = 0;
+    player.speed = 1;
     player.color = TANKWHEEL;
 }
 
@@ -42,22 +56,34 @@ void initEnemies() {
     for (int i; i < ENEMYCOUNT; i++) {
         enemies[i].x = 10 + (i * 30);
         enemies[i].y = 30;
+        enemies[i].oldX = enemies[i].x;
+        enemies[i].oldY = enemies[i].y;
         enemies[i].width = 15;
         enemies[i].height = 10;
         enemies[i].active = 1;
         enemies[i].fired = 0;
 
-        int colorPicker = rand() % 3;
+        int colorPicker = rand() % 4;
         switch (colorPicker) {
             case 0:
-                enemies[i].color = GREEN;
+                enemies[i].color = BLUE;
+                enemies[i].xVelocity = 1;
+                enemies[i].yVelocity = 1;
                 break;
             case 1:
                 enemies[i].color = RED;
+                enemies[i].xVelocity = -1;
+                enemies[i].yVelocity = -1;
                 break;
             case 2:
                 enemies[i].color = YELLOW;
+                enemies[i].xVelocity = 1;
+                enemies[i].yVelocity = -1;
                 break;
+            case 3:
+                enemies[i].color = MAGENTA;
+                enemies[i].xVelocity = -2;
+                enemies[i].yVelocity = 2;
         }
     }
 }
@@ -87,19 +113,53 @@ void updateGame() {
         }
         updateBullets(&bullets[i]);
     }
+
+    powerupX += powerupXVelocity;
+    powerupY += powerupYVelocity;
+
+    if (powerupY < 18) {
+        powerupY += 18 - powerupY;
+        powerupYVelocity = -powerupYVelocity;
+    }
+    if (powerupY + powerupHeight - 1 > 159) {
+        powerupY -= (powerupY + powerupHeight - 1) - 159;
+        powerupYVelocity = -powerupYVelocity;
+    }
+    if (powerupX < 0) {
+        powerupX = -powerupX;
+        powerupXVelocity = -powerupXVelocity;
+    }
+    if (powerupX + powerupWidth - 1 > 239) {
+        powerupX -= (powerupX + powerupWidth - 1) - 239;
+        powerupXVelocity = -powerupXVelocity;
+    }
 }
 
 void updatePlayer() {
-    if (BUTTON_HELD(BUTTON_LEFT) && (player.x - 1 > -1)) {
-        player.x -= 1;
+    if (player.iframes) {
+        if (damageTime >= 80) {
+            damageTime = 0;
+            player.iframes = 0;
+        } else {
+            damageTime++;
+        }
+    }
+
+    if (collision(player.x, player.y, player.width, player.height, powerupX, powerupY, powerupWidth, powerupHeight)) {
+        player.powered = 1;
+        player.speed = 2;
+    }
+
+    if (BUTTON_HELD(BUTTON_LEFT) && (player.x - player.speed > -1)) {
+        player.x -= player.speed;
         player.direction = 6;
     }
     if (BUTTON_HELD(BUTTON_RIGHT) && (player.x + player.width < SCREENWIDTH)) {
-        player.x += 1;
+        player.x += player.speed;
         player.direction = 2;
     }
-    if (BUTTON_HELD(BUTTON_UP) && (player.y - 1 > 17)) {
-        player.y -= 1;
+    if (BUTTON_HELD(BUTTON_UP) && (player.y - player.speed > 17)) {
+        player.y -= player.speed;
         player.direction = 0;
 
         if (BUTTON_HELD(BUTTON_LEFT) && !BUTTON_HELD(BUTTON_RIGHT)) {
@@ -109,7 +169,7 @@ void updatePlayer() {
         }
     }
     if (BUTTON_HELD(BUTTON_DOWN) && (player.y + player.height < SCREENHEIGHT)) {
-        player.y += 1;
+        player.y += player.speed;
         player.direction = 4;
 
         if (BUTTON_HELD(BUTTON_LEFT) && !BUTTON_HELD(BUTTON_RIGHT)) {
@@ -127,12 +187,51 @@ void updatePlayer() {
 
 void updateEnemies(ENEMY* e) {
     if (e->active) {
+        if (collision(e->x, e->y, e->width, e->height, player.x, player.y, player.width, player.height)) {
+            if (!player.iframes) {
+                player.iframes = 1;
+                player.lives -= 1;
+                lives = player.lives;
+            } 
+        }
+        e->x += e->xVelocity;
+        e->y += e->yVelocity;
 
+        if (e->y < 18) {
+            e->y += 18 - e->y;
+            e->yVelocity = -e->yVelocity;
+        }
+        if (e->y + e->height - 1 > 159) {
+            e->y -= (e->y + e->height - 1) - 159;
+            e->yVelocity = -e->yVelocity;
+        }
+        if (e->x < 0) {
+            e->x = -e->x;
+            e->xVelocity = -e->xVelocity;
+        }
+        if (e->x + e->width - 1 > 239) {
+            e->x -= (e->x + e->width - 1) - 239;
+            e->xVelocity = -e->xVelocity;
+        }
     }
 }
 
 void updateBullets(BULLET* b) {
     if (b->active) {
+        for (int i = 0; i < ENEMYCOUNT; i++) {
+            if (enemies[i].active) {
+                if (collision(b->x, b->y, b->width, b->height, enemies[i].x, enemies[i].y, enemies[i].width, enemies[i].height)) {
+                    if (b->playerBullet) {
+                        score++;
+                        enemies[i].active = 0;
+                        enemies[i].erased = 0;
+                        player.fired = 0;
+                    }
+                    b->active = 0;
+                    b->erased = 0;
+                }
+            }
+        }
         switch (b->direction) {
             case 0:
                 if (b->y - b->speed < 18) {
@@ -290,52 +389,95 @@ void drawGame() {
         }
         drawBullets(&bullets[i]);
     }
+
+    drawRect(powerupOldX, powerupOldY, powerupWidth, powerupHeight, GRAY);
+    if (!player.powered) {
+        drawRect(powerupX, powerupY, powerupWidth, powerupHeight, GREEN);
+    }
+
+    powerupOldX = powerupX;
+    powerupOldY = powerupY;
 }
 
 void drawPlayer() {
     drawRect(player.oldX, player.oldY, player.width, player.height, GRAY);
-    drawRect(player.x, player.y, player.width, player.height, player.color);
-    drawRect(player.x + 1, player.y + 1, 9, 9, TANKGREEN);
-    drawRect(player.x + 3, player.y + 3, 5, 5, TANKLIGHTGREEN);
-    switch (player.direction) {
-        case 0:
-            drawRect(player.x + 5, player.y, 1, 3, TANKLIGHTGREEN);
-            break;
-        case 1:
-            setPixel(player.x + 9, player.y + 1, TANKLIGHTGREEN);
-            setPixel(player.x + 8, player.y + 2, TANKLIGHTGREEN);
-            break;
-        case 2:
-            drawRect(player.x + 8, player.y + 5, 3, 1, TANKLIGHTGREEN);
-            break;
-        case 3:
-            setPixel(player.x + 8, player.y + 8, TANKLIGHTGREEN);
-            setPixel(player.x + 9, player.y + 9, TANKLIGHTGREEN);
-            break;
-        case 4:
-            drawRect(player.x + 5, player.y + 8, 1, 3, TANKLIGHTGREEN);
-            break;
-        case 5:
-            setPixel(player.x + 2, player.y + 8, TANKLIGHTGREEN);
-            setPixel(player.x + 1, player.y + 9, TANKLIGHTGREEN);
-            break;
-        case 6:
-            drawRect(player.x, player.y + 5, 3, 1, TANKLIGHTGREEN);
-            break;
-        case 7:
-            setPixel(player.x + 2, player.y + 2, TANKLIGHTGREEN);
-            setPixel(player.x + 1, player.y + 1, TANKLIGHTGREEN);
-            break;
+
+    if (player.iframes && (damageTime % 10) >= 5) {
+
+    } else {
+        drawRect(player.x, player.y, player.width, player.height, player.color);
+        drawRect(player.x + 1, player.y + 1, 9, 9, TANKGREEN);
+        drawRect(player.x + 3, player.y + 3, 5, 5, TANKLIGHTGREEN);
+        switch (player.direction) {
+            case 0:
+                drawRect(player.x + 5, player.y, 1, 3, TANKLIGHTGREEN);
+                break;
+            case 1:
+                setPixel(player.x + 9, player.y + 1, TANKLIGHTGREEN);
+                setPixel(player.x + 8, player.y + 2, TANKLIGHTGREEN);
+                break;
+            case 2:
+                drawRect(player.x + 8, player.y + 5, 3, 1, TANKLIGHTGREEN);
+                break;
+            case 3:
+                setPixel(player.x + 8, player.y + 8, TANKLIGHTGREEN);
+                setPixel(player.x + 9, player.y + 9, TANKLIGHTGREEN);
+                break;
+            case 4:
+                drawRect(player.x + 5, player.y + 8, 1, 3, TANKLIGHTGREEN);
+                break;
+            case 5:
+                setPixel(player.x + 2, player.y + 8, TANKLIGHTGREEN);
+                setPixel(player.x + 1, player.y + 9, TANKLIGHTGREEN);
+                break;
+            case 6:
+                drawRect(player.x, player.y + 5, 3, 1, TANKLIGHTGREEN);
+                break;
+            case 7:
+                setPixel(player.x + 2, player.y + 2, TANKLIGHTGREEN);
+                setPixel(player.x + 1, player.y + 1, TANKLIGHTGREEN);
+                break;
+        }
     }
+    
     player.oldX = player.x;
     player.oldY = player.y;
 }
 
 void drawEnemies(ENEMY* e) {
     if (e->active) {
-        drawRect(e->x, e->y, e->width, e->height, e->color);
+        drawRect(e->oldX, e->oldY, e->width, e->height, GRAY);
+        setPixel(e->x + 2, e->y, e->color);
+        setPixel(e->x + 12, e->y, e->color);
+        drawRect(e->x + 3, e->y + 1, 9, 4, e->color);
+        setPixel(e->x + 2, e->y + 2, e->color);
+        setPixel(e->x + 12, e->y + 2, e->color);
+        drawRect(e->x + 1, e->y + 3, 2, 1, e->color);
+        drawRect(e->x + 12, e->y + 3, 2, 1, e->color);
+        drawRect(e->x, e->y + 4, 3, 1, e->color);
+        drawRect(e->x + 12, e->y + 4, 3, 1, e->color);
+        drawRect(e->x, e->y + 5, 6, 1, e->color);
+        drawRect(e->x + 9, e->y + 5, 6, 1, e->color);
+        drawRect(e->x + 1, e->y + 6, 4, 1, e->color);
+        drawRect(e->x + 10, e->y + 6, 4, 1, e->color);
+        drawRect(e->x + 2, e->y + 7, 2, 1, e->color);
+        drawRect(e->x + 11, e->y + 7, 2, 1, e->color);
+        drawRect(e->x + 3, e->y + 8, 2, 1, e->color);
+        drawRect(e->x + 10, e->y + 8, 2, 1, e->color);
+        drawRect(e->x + 4, e->y + 9, 2, 1, e->color);
+        drawRect(e->x + 9, e->y + 9, 2, 1, e->color);
+        drawRect(e->x + 6, e->y + 2, 3, 3, ENEMYORANGE);
+        setPixel(e->x + 5, e->y + 2, ENEMYORANGE);
+        setPixel(e->x + 9, e->y + 2, ENEMYORANGE);
+        setPixel(e->x + 7, e->y + 5, ENEMYORANGE);
+        drawRect(e->x + 6, e->y + 7, 3, 1, CYAN);
+        setPixel(e->x + 7, e->y + 6, CYAN);
+        setPixel(e->x + 7, e->y + 8, CYAN);
+        e->oldX = e->x;
+        e->oldY = e->y;
     } else if (!e->erased) {
-
+        drawRect(e->x, e->y, e->width, e->height, GRAY);
+        e->erased = 1;
     }
 }
 
@@ -352,6 +494,7 @@ void drawBullets(BULLET* b) {
 }
 
 void drawLives() {
+    drawRect(5, 5, 59, 8, BLACK);
     for (int i = 0; i < lives; i++) {
         drawTankIcon(5 + (i * 18), 5);
     }

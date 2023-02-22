@@ -56,6 +56,8 @@ int collision(int x1, int y1, int width1, int height1, int x2, int y2, int width
 #define TANKWHEEL COLOR(5, 5, 5)
 #define TANKLIGHTWHEEL COLOR(9, 9, 9)
 
+#define ENEMYORANGE COLOR(31, 19, 7)
+
 // Mode 3 Drawing Functions
 #define setPixel(x, y, color) (videoBuffer[OFFSET(x, y, SCREENWIDTH)] = color)
 void drawRect(int x, int y, int width, int height, volatile unsigned short color);

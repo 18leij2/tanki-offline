@@ -27,12 +27,12 @@ void waitForVBlank();
 
 
 int collision(int x1, int y1, int width1, int height1, int x2, int y2, int width2, int height2);
-# 60 "gba.h"
+# 63 "gba.h"
 void drawRect(int x, int y, int width, int height, volatile unsigned short color);
 void fillScreen(volatile unsigned short color);
 void drawChar(int x, int y, char ch, unsigned short color);
 void drawString(int x, int y, char *str, unsigned short color);
-# 79 "gba.h"
+# 82 "gba.h"
 extern unsigned short oldButtons;
 extern unsigned short buttons;
 
@@ -45,7 +45,7 @@ typedef volatile struct {
     volatile unsigned int cnt;
 } DMA;
 extern DMA *dma;
-# 110 "gba.h"
+# 113 "gba.h"
 void DMANow(int channel, volatile const void *src, volatile void *dst, unsigned int cnt);
 # 2 "main.c" 2
 # 1 "game.h" 1
@@ -61,6 +61,9 @@ typedef struct {
     int width;
     int height;
     int lives;
+    int iframes;
+    int direction;
+    int fired;
     unsigned short color;
 } PLAYER;
 
@@ -73,6 +76,7 @@ typedef struct {
     int yVelocity;
     int width;
     int height;
+    int fired;
     unsigned short color;
     int active;
     int erased;
@@ -87,6 +91,9 @@ typedef struct {
     int yVelocity;
     int width;
     int height;
+    int direction;
+    int speed;
+    int playerBullet;
     unsigned short color;
     int active;
     int erased;
@@ -98,10 +105,11 @@ typedef struct {
 
 
 extern PLAYER player;
-extern BULLET bullets[20];
+extern BULLET bullets[10];
 extern ENEMY enemies[5];
 extern int score;
 extern int time;
+extern int lives;
 
 
 void initGame();
@@ -117,9 +125,9 @@ void drawGame();
 void drawPlayer();
 void drawEnemies(ENEMY* e);
 void drawBullets(BULLET* b);
-void drawHealth();
+void drawLives();
 void drawTankIcon();
-void newEnemy();
+void newBullet();
 # 3 "main.c" 2
 # 1 "print.h" 1
 # 26 "print.h"
@@ -1373,6 +1381,10 @@ void goToGame();
 void game();
 void goToPause();
 void pause();
+void goToWin();
+void win();
+void goToLose();
+void lose();
 
 unsigned short oldButtons;
 unsigned short buttons;
@@ -1411,8 +1423,10 @@ int main() {
                 pause();
                 break;
             case WIN:
+                win();
                 break;
             case LOSE:
+                lose();
                 break;
         }
     }
@@ -1461,12 +1475,21 @@ void game() {
     updateGame();
     sprintf(buffer, "%d", score);
     waitForVBlank();
+    drawRect(116, 5, 12, 8, ((0&31) | (0&31) << 5 | (0&31) << 10));
     drawString(116, 5, buffer, ((31&31) | (31&31) << 5 | (31&31) << 10));
 
     drawGame();
 
     if ((!(~(oldButtons) & ((1<<3))) && (~(buttons) & ((1<<3))))) {
         goToPause();
+    }
+
+    if (score == 5) {
+        goToWin();
+    }
+
+    if (lives == 0) {
+        goToLose();
     }
 }
 
@@ -1478,8 +1501,38 @@ void goToPause() {
 void pause() {
     waitForVBlank();
     if ((!(~(oldButtons) & ((1<<3))) && (~(buttons) & ((1<<3))))) {
+        drawRect(200, 5, 36, 8, ((0&31) | (0&31) << 5 | (0&31) << 10));
         state = GAME;
     } else if ((!(~(oldButtons) & ((1<<2))) && (~(buttons) & ((1<<2))))) {
+        goToStart();
+    }
+}
+
+void goToWin() {
+    fillScreen(((15&31) | (15&31) << 5 | (15&31) << 10));
+    drawString(95, 75, "YOU WON!", ((0&31) | (31&31) << 5 | (0&31) << 10));
+    drawString(50, 90, "You slain all 5 enemies", ((0&31) | (31&31) << 5 | (0&31) << 10));
+    state = WIN;
+}
+
+void win() {
+    waitForVBlank();
+    if ((!(~(oldButtons) & ((1<<3))) && (~(buttons) & ((1<<3))))) {
+        goToStart();
+    }
+}
+
+void goToLose() {
+    fillScreen(((15&31) | (15&31) << 5 | (15&31) << 10));
+    drawString(86, 75, "YOU LOSE...", ((31&31) | (0&31) << 5 | (0&31) << 10));
+    drawString(47, 90, "You slain only   enemies", ((31&31) | (0&31) << 5 | (0&31) << 10));
+    drawString(137, 90, buffer, ((31&31) | (0&31) << 5 | (0&31) << 10));
+    state = LOSE;
+}
+
+void lose() {
+    waitForVBlank();
+    if ((!(~(oldButtons) & ((1<<3))) && (~(buttons) & ((1<<3))))) {
         goToStart();
     }
 }

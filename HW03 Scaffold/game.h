@@ -10,8 +10,11 @@ typedef struct {
     int width;
     int height;
     int lives;
+    int iframes;
     int direction;
     int fired;
+    int powered;
+    int speed;
     unsigned short color;
 } PLAYER;
 
@@ -49,7 +52,7 @@ typedef struct {
 
 // constants
 #define ENEMYCOUNT 5
-#define BULLETCOUNT 20
+#define BULLETCOUNT 10
 
 // variables;
 extern PLAYER player;

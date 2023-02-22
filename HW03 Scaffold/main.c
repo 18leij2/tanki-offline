@@ -11,6 +11,10 @@ void goToGame();
 void game();
 void goToPause();
 void pause();
+void goToWin();
+void win();
+void goToLose();
+void lose();
 
 unsigned short oldButtons;
 unsigned short buttons;
@@ -49,8 +53,10 @@ int main() {
                 pause();
                 break;
             case WIN:
+                win();
                 break;
             case LOSE:
+                lose();
                 break;
         }
     }
@@ -99,12 +105,21 @@ void game() {
     updateGame();
     sprintf(buffer, "%d", score);
     waitForVBlank();
+    drawRect(116, 5, 12, 8, BLACK);
     drawString(116, 5, buffer, WHITE);
 
     drawGame();
 
     if (BUTTON_PRESSED(BUTTON_START)) {
         goToPause();
+    }
+
+    if (score == 5) {
+        goToWin();
+    }
+
+    if (lives == 0) {
+        goToLose();
     }
 }
 
@@ -116,8 +131,38 @@ void goToPause() {
 void pause() {
     waitForVBlank();
     if (BUTTON_PRESSED(BUTTON_START)) {
+        drawRect(200, 5, 36, 8, BLACK);
         state = GAME;
     } else if (BUTTON_PRESSED(BUTTON_SELECT)) {
+        goToStart();
+    }
+}
+
+void goToWin() {
+    fillScreen(GRAY);
+    drawString(95, 75, "YOU WON!", GREEN);
+    drawString(50, 90, "You slain all 5 enemies", GREEN);
+    state = WIN;
+}
+
+void win() {
+    waitForVBlank();
+    if (BUTTON_PRESSED(BUTTON_START)) {
+        goToStart();
+    }
+}
+
+void goToLose() {
+    fillScreen(GRAY);
+    drawString(86, 75, "YOU LOSE...", RED);
+    drawString(47, 90, "You slain only   enemies", RED);
+    drawString(137, 90, buffer, RED);
+    state = LOSE;
+}
+
+void lose() {
+    waitForVBlank();
+    if (BUTTON_PRESSED(BUTTON_START)) {
         goToStart();
     }
 }
