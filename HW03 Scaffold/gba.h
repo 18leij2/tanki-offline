@@ -55,6 +55,8 @@ int collision(int x1, int y1, int width1, int height1, int x2, int y2, int width
 #define TANKLIGHTGREEN COLOR(1, 25, 2)
 #define TANKWHEEL COLOR(5, 5, 5)
 #define TANKLIGHTWHEEL COLOR(9, 9, 9)
+#define TANKGOLD COLOR(21, 17, 1)
+#define TANKGOLDLIGHT COLOR(29, 26, 12)
 
 #define ENEMYORANGE COLOR(31, 19, 7)
 

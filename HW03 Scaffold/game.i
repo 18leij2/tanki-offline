@@ -27,12 +27,12 @@ void waitForVBlank();
 
 
 int collision(int x1, int y1, int width1, int height1, int x2, int y2, int width2, int height2);
-# 63 "gba.h"
+# 65 "gba.h"
 void drawRect(int x, int y, int width, int height, volatile unsigned short color);
 void fillScreen(volatile unsigned short color);
 void drawChar(int x, int y, char ch, unsigned short color);
 void drawString(int x, int y, char *str, unsigned short color);
-# 82 "gba.h"
+# 84 "gba.h"
 extern unsigned short oldButtons;
 extern unsigned short buttons;
 
@@ -45,7 +45,7 @@ typedef volatile struct {
     volatile unsigned int cnt;
 } DMA;
 extern DMA *dma;
-# 113 "gba.h"
+# 115 "gba.h"
 void DMANow(int channel, volatile const void *src, volatile void *dst, unsigned int cnt);
 # 2 "game.c" 2
 # 1 "game.h" 1
@@ -940,10 +940,89 @@ extern long double strtold (const char *restrict, char **restrict);
 # 336 "/opt/devkitpro/devkitARM/arm-none-eabi/include/stdlib.h" 3
 
 # 4 "game.c" 2
+# 1 "sound.h" 1
+# 74 "sound.h"
+
+# 74 "sound.h"
+enum {
+  REST = 0,
+  NOTE_C2 =44,
+  NOTE_CS2 =157,
+  NOTE_D2 =263,
+  NOTE_DS2 =363,
+  NOTE_E2 =457,
+  NOTE_F2 =547,
+  NOTE_FS2 =631,
+  NOTE_G2 =711,
+  NOTE_GS2 =786,
+  NOTE_A2 =856,
+  NOTE_AS2 =923,
+  NOTE_B2 =986,
+  NOTE_C3 =1046,
+  NOTE_CS3 =1102,
+  NOTE_D3 =1155,
+  NOTE_DS3 =1205,
+  NOTE_E3 =1253,
+  NOTE_F3 =1297,
+  NOTE_FS3 =1339,
+  NOTE_G3 =1379,
+  NOTE_GS3 =1417,
+  NOTE_A3 =1452,
+  NOTE_AS3 =1486,
+  NOTE_B3 =1517,
+  NOTE_C4 =1547,
+  NOTE_CS4 =1575,
+  NOTE_D4 =1602,
+  NOTE_DS4 =1627,
+  NOTE_E4 =1650,
+  NOTE_F4 =1673,
+  NOTE_FS4 =1694,
+  NOTE_G4 =1714,
+  NOTE_GS4 =1732,
+  NOTE_A4 =1750,
+  NOTE_AS4 =1767,
+  NOTE_B4 =1783,
+  NOTE_C5 =1798,
+  NOTE_CS5 =1812,
+  NOTE_D5 =1825,
+  NOTE_DS5 =1837,
+  NOTE_E5 =1849,
+  NOTE_F5 =1860,
+  NOTE_FS5 =1871,
+  NOTE_G5 =1881,
+  NOTE_GS5 =1890,
+  NOTE_A5 =1899,
+  NOTE_AS5 =1907,
+  NOTE_B5 =1915,
+  NOTE_C6 =1923,
+  NOTE_CS6 =1930,
+  NOTE_D6 =1936,
+  NOTE_DS6 =1943,
+  NOTE_E6 =1949,
+  NOTE_F6 =1954,
+  NOTE_FS6 =1959,
+  NOTE_G6 =1964,
+  NOTE_GS6 =1969,
+  NOTE_A6 =1974,
+  NOTE_AS6 =1978,
+  NOTE_B6 =1982,
+  NOTE_C7 =1985,
+  NOTE_CS7 =1989,
+  NOTE_D7 =1992,
+  NOTE_DS7 =1995,
+  NOTE_E7 =1998,
+  NOTE_F7 =2001,
+  NOTE_FS7 =2004,
+  NOTE_G7 =2006,
+  NOTE_GS7 =2009,
+  NOTE_A7 =2011,
+  NOTE_AS7 =2013,
+  NOTE_B7 =2015,
+  NOTE_C8 =2017
+} NOTES;
+# 5 "game.c" 2
 
 
-
-# 6 "game.c"
 PLAYER player;
 BULLET bullets[10];
 ENEMY enemies[5];
@@ -952,9 +1031,14 @@ ENEMY enemies[5];
 int score;
 int time;
 int damageTime;
+int nullTime;
 int lives;
 
 int powerupX, powerupY, powerupOldX, powerupOldY, powerupWidth, powerupHeight, powerupXVelocity, powerupYVelocity;
+int nullX, nullY, nullOldX, nullOldY, nullWidth, nullHeight, nullXVelocity, nullYVelocity;
+
+unsigned short mainColor;
+unsigned short accent;
 
 
 void initGame() {
@@ -973,6 +1057,18 @@ void initGame() {
     powerupHeight = 3;
     powerupXVelocity = 4;
     powerupYVelocity = 4;
+
+    nullX = 180;
+    nullY = 109;
+    nullOldX = nullX;
+    nullOldY = nullY;
+    nullWidth = 50;
+    nullHeight = 50;
+    nullXVelocity = -1;
+    nullYVelocity = -1;
+
+    mainColor = ((2&31) | (13&31) << 5 | (2&31) << 10);
+    accent = ((1&31) | (25&31) << 5 | (2&31) << 10);
 }
 
 void initPlayer() {
@@ -1074,6 +1170,33 @@ void updateGame() {
         powerupX -= (powerupX + powerupWidth - 1) - 239;
         powerupXVelocity = -powerupXVelocity;
     }
+
+    nullX += nullXVelocity;
+    nullY += nullYVelocity;
+
+    if (nullY < 18) {
+        nullY += 18 - nullY;
+        nullYVelocity = -nullYVelocity;
+    }
+    if (nullY + nullHeight - 1 > 159) {
+        nullY -= (nullY + nullHeight - 1) - 159;
+        nullYVelocity = -nullYVelocity;
+    }
+    if (nullX < 0) {
+        nullX = -nullX;
+        nullXVelocity = -nullXVelocity;
+    }
+    if (nullX + nullWidth - 1 > 239) {
+        nullX -= (nullX + nullWidth - 1) - 239;
+        nullXVelocity = -nullXVelocity;
+    }
+
+    if (nullTime >= 400) {
+        nullTime = 0;
+        nullX = rand() % 189;
+        nullY = 18 + rand() % 101;
+    }
+    nullTime++;
 }
 
 void updatePlayer() {
@@ -1086,9 +1209,15 @@ void updatePlayer() {
         }
     }
 
-    if (collision(player.x, player.y, player.width, player.height, powerupX, powerupY, powerupWidth, powerupHeight)) {
+    if (collision(player.x, player.y, player.width, player.height, powerupX, powerupY, powerupWidth, powerupHeight) && player.powered == 0) {
         player.powered = 1;
         player.speed = 2;
+
+        mainColor = ((21&31) | (17&31) << 5 | (1&31) << 10);
+        accent = ((29&31) | (26&31) << 5 | (12&31) << 10);
+
+        *(volatile u16*)0x04000068 = (((5) & 15) << 12) | (((6) & 7) << 8);
+        *(volatile u16*)0x0400006C = NOTE_C7 | (1<<15);
     }
 
     if ((~(buttons) & ((1<<5))) && (player.x - player.speed > -1)) {
@@ -1120,9 +1249,14 @@ void updatePlayer() {
         }
     }
 
-    if ((!(~(oldButtons) & ((1<<0))) && (~(buttons) & ((1<<0)))) && player.fired == 0) {
-        player.fired = 1;
+    if ((!(~(oldButtons) & ((1<<0))) && (~(buttons) & ((1<<0)))) && player.fired == 0 && !collision(player.x, player.y, player.width, player.height, nullX, nullY, nullWidth, nullHeight)) {
+        if (!player.powered) {
+            player.fired = 1;
+        }
         newBullet(0);
+
+        *(volatile u16*)0x04000068 = (((5) & 15) << 12) | (((2) & 7) << 8);
+        *(volatile u16*)0x0400006C = NOTE_D3 | (1<<15);
     }
 }
 
@@ -1133,6 +1267,9 @@ void updateEnemies(ENEMY* e) {
                 player.iframes = 1;
                 player.lives -= 1;
                 lives = player.lives;
+
+                *(volatile u16*)0x04000068 = (((5) & 15) << 12) | (((6) & 7) << 8);
+                *(volatile u16*)0x0400006C = NOTE_A2 | (1<<15);
             }
         }
         e->x += e->xVelocity;
@@ -1167,6 +1304,9 @@ void updateBullets(BULLET* b) {
                         enemies[i].active = 0;
                         enemies[i].erased = 0;
                         player.fired = 0;
+
+                        *(volatile u16*)0x04000078 = (((5) & 15) << 12) | (((6) & 7) << 8);
+                        *(volatile u16*)0x0400007C = NOTE_C5 | (1<<15);
                     }
                     b->active = 0;
                     b->erased = 0;
@@ -1323,7 +1463,6 @@ void drawStart() {
 
 void drawGame() {
     drawLives();
-    drawPlayer();
     for (int i = 0; i < 10; i++) {
         if (i < 5) {
             drawEnemies(&enemies[i]);
@@ -1336,47 +1475,54 @@ void drawGame() {
         drawRect(powerupX, powerupY, powerupWidth, powerupHeight, ((0&31) | (31&31) << 5 | (0&31) << 10));
     }
 
+    drawPlayer();
+
+    nullOldX = nullX;
+    nullOldY = nullY;
+
     powerupOldX = powerupX;
     powerupOldY = powerupY;
 }
 
 void drawPlayer() {
     drawRect(player.oldX, player.oldY, player.width, player.height, ((15&31) | (15&31) << 5 | (15&31) << 10));
+    drawRect(nullOldX, nullOldY, nullWidth, nullHeight, ((15&31) | (15&31) << 5 | (15&31) << 10));
+    drawRect(nullX, nullY, nullWidth, nullHeight, ((9&31) | (9&31) << 5 | (9&31) << 10));
 
     if (player.iframes && (damageTime % 10) >= 5) {
 
     } else {
         drawRect(player.x, player.y, player.width, player.height, player.color);
-        drawRect(player.x + 1, player.y + 1, 9, 9, ((2&31) | (13&31) << 5 | (2&31) << 10));
-        drawRect(player.x + 3, player.y + 3, 5, 5, ((1&31) | (25&31) << 5 | (2&31) << 10));
+        drawRect(player.x + 1, player.y + 1, 9, 9, mainColor);
+        drawRect(player.x + 3, player.y + 3, 5, 5, accent);
         switch (player.direction) {
             case 0:
-                drawRect(player.x + 5, player.y, 1, 3, ((1&31) | (25&31) << 5 | (2&31) << 10));
+                drawRect(player.x + 5, player.y, 1, 3, accent);
                 break;
             case 1:
-                (videoBuffer[((player.y + 1) * (240) + (player.x + 9))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
-                (videoBuffer[((player.y + 2) * (240) + (player.x + 8))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
+                (videoBuffer[((player.y + 1) * (240) + (player.x + 9))] = accent);
+                (videoBuffer[((player.y + 2) * (240) + (player.x + 8))] = accent);
                 break;
             case 2:
-                drawRect(player.x + 8, player.y + 5, 3, 1, ((1&31) | (25&31) << 5 | (2&31) << 10));
+                drawRect(player.x + 8, player.y + 5, 3, 1, accent);
                 break;
             case 3:
-                (videoBuffer[((player.y + 8) * (240) + (player.x + 8))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
-                (videoBuffer[((player.y + 9) * (240) + (player.x + 9))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
+                (videoBuffer[((player.y + 8) * (240) + (player.x + 8))] = accent);
+                (videoBuffer[((player.y + 9) * (240) + (player.x + 9))] = accent);
                 break;
             case 4:
-                drawRect(player.x + 5, player.y + 8, 1, 3, ((1&31) | (25&31) << 5 | (2&31) << 10));
+                drawRect(player.x + 5, player.y + 8, 1, 3, accent);
                 break;
             case 5:
-                (videoBuffer[((player.y + 8) * (240) + (player.x + 2))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
-                (videoBuffer[((player.y + 9) * (240) + (player.x + 1))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
+                (videoBuffer[((player.y + 8) * (240) + (player.x + 2))] = accent);
+                (videoBuffer[((player.y + 9) * (240) + (player.x + 1))] = accent);
                 break;
             case 6:
-                drawRect(player.x, player.y + 5, 3, 1, ((1&31) | (25&31) << 5 | (2&31) << 10));
+                drawRect(player.x, player.y + 5, 3, 1, accent);
                 break;
             case 7:
-                (videoBuffer[((player.y + 2) * (240) + (player.x + 2))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
-                (videoBuffer[((player.y + 1) * (240) + (player.x + 1))] = ((1&31) | (25&31) << 5 | (2&31) << 10));
+                (videoBuffer[((player.y + 2) * (240) + (player.x + 2))] = accent);
+                (videoBuffer[((player.y + 1) * (240) + (player.x + 1))] = accent);
                 break;
         }
     }
@@ -1417,6 +1563,7 @@ void drawEnemies(ENEMY* e) {
         e->oldX = e->x;
         e->oldY = e->y;
     } else if (!e->erased) {
+        drawRect(e->oldX, e->oldY, e->width, e->height, ((15&31) | (15&31) << 5 | (15&31) << 10));
         drawRect(e->x, e->y, e->width, e->height, ((15&31) | (15&31) << 5 | (15&31) << 10));
         e->erased = 1;
     }
@@ -1429,6 +1576,7 @@ void drawBullets(BULLET* b) {
         b->oldX = b->x;
         b->oldY = b->y;
     } else if (!b->erased) {
+        drawRect(b->oldX, b->oldY, b->width, b->height, ((15&31) | (15&31) << 5 | (15&31) << 10));
         drawRect(b->x, b->y, b->width, b->height, ((15&31) | (15&31) << 5 | (15&31) << 10));
         b->erased = 1;
     }

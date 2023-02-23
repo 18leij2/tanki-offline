@@ -3,6 +3,7 @@
 #include "print.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include "sound.h"
 
 void initialize();
 void goToStart();
@@ -65,7 +66,19 @@ int main() {
 void initialize() {
     REG_DISPCTL = MODE(3) | BG_ENABLE(2);
 
-    // SOUND STUFF HERE FOR LATER
+    REG_SOUNDCNT_X = SND_ENABLED;
+
+    REG_SOUNDCNT_L = DMG_VOL_LEFT(5) |
+                   DMG_VOL_RIGHT(5) |
+                   DMG_SND1_LEFT |
+                   DMG_SND1_RIGHT |
+                   DMG_SND2_LEFT |
+                   DMG_SND2_RIGHT |
+                   DMG_SND3_LEFT |
+                   DMG_SND3_RIGHT |
+                   DMG_SND4_LEFT |
+                   DMG_SND4_RIGHT;
+    REG_SOUNDCNT_H = DMG_MASTER_VOL(2);
 
     buttons = REG_BUTTONS;
     oldButtons = 0;
@@ -141,7 +154,7 @@ void pause() {
 void goToWin() {
     fillScreen(GRAY);
     drawString(95, 75, "YOU WON!", GREEN);
-    drawString(50, 90, "You slain all 5 enemies", GREEN);
+    drawString(47, 90, "You slayed all 5 enemies", GREEN);
     state = WIN;
 }
 
@@ -155,8 +168,8 @@ void win() {
 void goToLose() {
     fillScreen(GRAY);
     drawString(86, 75, "YOU LOSE...", RED);
-    drawString(47, 90, "You slain only   enemies", RED);
-    drawString(137, 90, buffer, RED);
+    drawString(45, 90, "You slayed only   enemies", RED);
+    drawString(140, 90, buffer, RED);
     state = LOSE;
 }
 

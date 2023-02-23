@@ -1,6 +1,7 @@
 #include "gba.h"
 #include "game.h"
 #include <stdlib.h>
+#include "sound.h"
 
 // structs on the screen
 PLAYER player;
@@ -11,9 +12,14 @@ ENEMY enemies[ENEMYCOUNT];
 int score;
 int time;
 int damageTime;
+int nullTime;
 int lives;
 
 int powerupX, powerupY, powerupOldX, powerupOldY, powerupWidth, powerupHeight, powerupXVelocity, powerupYVelocity;
+int nullX, nullY, nullOldX, nullOldY, nullWidth, nullHeight, nullXVelocity, nullYVelocity;
+
+unsigned short mainColor;
+unsigned short accent;
 
 // initialize
 void initGame() {
@@ -32,6 +38,18 @@ void initGame() {
     powerupHeight = 3;
     powerupXVelocity = 4;
     powerupYVelocity = 4;
+
+    nullX = 180;
+    nullY = 109;
+    nullOldX = nullX;
+    nullOldY = nullY;
+    nullWidth = 50;
+    nullHeight = 50;
+    nullXVelocity = -1;
+    nullYVelocity = -1;
+
+    mainColor = TANKGREEN;
+    accent = TANKLIGHTGREEN;
 }
 
 void initPlayer() {
@@ -133,6 +151,33 @@ void updateGame() {
         powerupX -= (powerupX + powerupWidth - 1) - 239;
         powerupXVelocity = -powerupXVelocity;
     }
+
+    nullX += nullXVelocity;
+    nullY += nullYVelocity;
+
+    if (nullY < 18) {
+        nullY += 18 - nullY;
+        nullYVelocity = -nullYVelocity;
+    }
+    if (nullY + nullHeight - 1 > 159) {
+        nullY -= (nullY + nullHeight - 1) - 159;
+        nullYVelocity = -nullYVelocity;
+    }
+    if (nullX < 0) {
+        nullX = -nullX;
+        nullXVelocity = -nullXVelocity;
+    }
+    if (nullX + nullWidth - 1 > 239) {
+        nullX -= (nullX + nullWidth - 1) - 239;
+        nullXVelocity = -nullXVelocity;
+    }
+
+    if (nullTime >= 400) {
+        nullTime = 0;
+        nullX = rand() % 189;
+        nullY = 18 + rand() % 101;
+    }
+    nullTime++;
 }
 
 void updatePlayer() {
@@ -145,9 +190,15 @@ void updatePlayer() {
         }
     }
 
-    if (collision(player.x, player.y, player.width, player.height, powerupX, powerupY, powerupWidth, powerupHeight)) {
+    if (collision(player.x, player.y, player.width, player.height, powerupX, powerupY, powerupWidth, powerupHeight) && player.powered == 0) {
         player.powered = 1;
         player.speed = 2;
+
+        mainColor = TANKGOLD;
+        accent = TANKGOLDLIGHT;
+
+        REG_SND2CNT = DMG_ENV_VOL(5) | DMG_STEP_TIME(6);
+        REG_SND2FREQ = NOTE_C7 | SND_RESET;
     }
 
     if (BUTTON_HELD(BUTTON_LEFT) && (player.x - player.speed > -1)) {
@@ -179,9 +230,14 @@ void updatePlayer() {
         }
     }
 
-    if (BUTTON_PRESSED(BUTTON_A) && player.fired == 0) {
-        player.fired = 1;
+    if (BUTTON_PRESSED(BUTTON_A) && player.fired == 0 && !collision(player.x, player.y, player.width, player.height, nullX, nullY, nullWidth, nullHeight)) {
+        if (!player.powered) {
+            player.fired = 1;
+        }
         newBullet(0);
+
+        REG_SND2CNT = DMG_ENV_VOL(5) | DMG_STEP_TIME(2);
+        REG_SND2FREQ = NOTE_D3 | SND_RESET;
     }
 }
 
@@ -192,6 +248,9 @@ void updateEnemies(ENEMY* e) {
                 player.iframes = 1;
                 player.lives -= 1;
                 lives = player.lives;
+
+                REG_SND2CNT = DMG_ENV_VOL(5) | DMG_STEP_TIME(6);
+                REG_SND2FREQ = NOTE_A2 | SND_RESET;
             } 
         }
         e->x += e->xVelocity;
@@ -226,6 +285,9 @@ void updateBullets(BULLET* b) {
                         enemies[i].active = 0;
                         enemies[i].erased = 0;
                         player.fired = 0;
+
+                        REG_SND4CNT = DMG_ENV_VOL(5) | DMG_STEP_TIME(6);
+                        REG_SND4FREQ = NOTE_C5 | SND_RESET;
                     }
                     b->active = 0;
                     b->erased = 0;
@@ -382,7 +444,6 @@ void drawStart() {
 // draw
 void drawGame() {
     drawLives();
-    drawPlayer();
     for (int i = 0; i < BULLETCOUNT; i++) {
         if (i < ENEMYCOUNT) {
             drawEnemies(&enemies[i]);
@@ -395,47 +456,54 @@ void drawGame() {
         drawRect(powerupX, powerupY, powerupWidth, powerupHeight, GREEN);
     }
 
+    drawPlayer();
+
+    nullOldX = nullX;
+    nullOldY = nullY;
+
     powerupOldX = powerupX;
     powerupOldY = powerupY;
 }
 
 void drawPlayer() {
     drawRect(player.oldX, player.oldY, player.width, player.height, GRAY);
+    drawRect(nullOldX, nullOldY, nullWidth, nullHeight, GRAY);
+    drawRect(nullX, nullY, nullWidth, nullHeight, TANKLIGHTWHEEL);
 
     if (player.iframes && (damageTime % 10) >= 5) {
 
     } else {
         drawRect(player.x, player.y, player.width, player.height, player.color);
-        drawRect(player.x + 1, player.y + 1, 9, 9, TANKGREEN);
-        drawRect(player.x + 3, player.y + 3, 5, 5, TANKLIGHTGREEN);
+        drawRect(player.x + 1, player.y + 1, 9, 9, mainColor);
+        drawRect(player.x + 3, player.y + 3, 5, 5, accent);
         switch (player.direction) {
             case 0:
-                drawRect(player.x + 5, player.y, 1, 3, TANKLIGHTGREEN);
+                drawRect(player.x + 5, player.y, 1, 3, accent);
                 break;
             case 1:
-                setPixel(player.x + 9, player.y + 1, TANKLIGHTGREEN);
-                setPixel(player.x + 8, player.y + 2, TANKLIGHTGREEN);
+                setPixel(player.x + 9, player.y + 1, accent);
+                setPixel(player.x + 8, player.y + 2, accent);
                 break;
             case 2:
-                drawRect(player.x + 8, player.y + 5, 3, 1, TANKLIGHTGREEN);
+                drawRect(player.x + 8, player.y + 5, 3, 1, accent);
                 break;
             case 3:
-                setPixel(player.x + 8, player.y + 8, TANKLIGHTGREEN);
-                setPixel(player.x + 9, player.y + 9, TANKLIGHTGREEN);
+                setPixel(player.x + 8, player.y + 8, accent);
+                setPixel(player.x + 9, player.y + 9, accent);
                 break;
             case 4:
-                drawRect(player.x + 5, player.y + 8, 1, 3, TANKLIGHTGREEN);
+                drawRect(player.x + 5, player.y + 8, 1, 3, accent);
                 break;
             case 5:
-                setPixel(player.x + 2, player.y + 8, TANKLIGHTGREEN);
-                setPixel(player.x + 1, player.y + 9, TANKLIGHTGREEN);
+                setPixel(player.x + 2, player.y + 8, accent);
+                setPixel(player.x + 1, player.y + 9, accent);
                 break;
             case 6:
-                drawRect(player.x, player.y + 5, 3, 1, TANKLIGHTGREEN);
+                drawRect(player.x, player.y + 5, 3, 1, accent);
                 break;
             case 7:
-                setPixel(player.x + 2, player.y + 2, TANKLIGHTGREEN);
-                setPixel(player.x + 1, player.y + 1, TANKLIGHTGREEN);
+                setPixel(player.x + 2, player.y + 2, accent);
+                setPixel(player.x + 1, player.y + 1, accent);
                 break;
         }
     }
@@ -476,6 +544,7 @@ void drawEnemies(ENEMY* e) {
         e->oldX = e->x;
         e->oldY = e->y;
     } else if (!e->erased) {
+        drawRect(e->oldX, e->oldY, e->width, e->height, GRAY);
         drawRect(e->x, e->y, e->width, e->height, GRAY);
         e->erased = 1;
     }
@@ -488,6 +557,7 @@ void drawBullets(BULLET* b) {
         b->oldX = b->x;
         b->oldY = b->y; 
     } else if (!b->erased) {
+        drawRect(b->oldX, b->oldY, b->width, b->height, GRAY);
         drawRect(b->x, b->y, b->width, b->height, GRAY);
         b->erased = 1;
     }

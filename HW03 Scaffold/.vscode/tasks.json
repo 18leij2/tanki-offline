@@ -12,8 +12,8 @@
         {
             "label": "build run",
             "type": "shell",
-            "command": "D:/'downloads and files'/Stuff/School/'CS 2261'/mGBA.exe ./Project.gba",
-            // "command": "C:/School/'CS 2261'/mGBA.exe ./Project.gba",
+            // "command": "D:/'downloads and files'/Stuff/School/'CS 2261'/mGBA.exe ./Project.gba",
+            "command": "C:/School/'CS 2261'/mGBA.exe ./Project.gba",
             // add the mGBA.exe exact path to the above line,
             // before "./Project.gba"!
             // make sure there is a space between the exact path and "./Project.gba".
