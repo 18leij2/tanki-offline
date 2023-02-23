@@ -52,6 +52,7 @@ void initGame() {
     accent = TANKLIGHTGREEN;
 }
 
+// initializes the player with the starting values
 void initPlayer() {
     player.x = 117;
     player.y = 130;
@@ -70,6 +71,7 @@ void initPlayer() {
     player.color = TANKWHEEL;
 }
 
+// initializes enemies with different positions, and chooses a random color to assign it to
 void initEnemies() {
     for (int i; i < ENEMYCOUNT; i++) {
         enemies[i].x = 10 + (i * 30);
@@ -106,6 +108,7 @@ void initEnemies() {
     }
 }
 
+// Initializes the bullet array that is to be used for object pooling
 void initBullets() {
     for (int i; i < BULLETCOUNT; i++) {
         bullets[i].x = 10 + (i * 15);
@@ -122,7 +125,7 @@ void initBullets() {
     }
 }
 
-// update
+// update game
 void updateGame() {
     updatePlayer();
     for (int i = 0; i < BULLETCOUNT; i++) {
@@ -132,6 +135,7 @@ void updateGame() {
         updateBullets(&bullets[i]);
     }
 
+    // Code for powerup boundary checking to ensure it stays within the bounds
     powerupX += powerupXVelocity;
     powerupY += powerupYVelocity;
 
@@ -152,6 +156,7 @@ void updateGame() {
         powerupXVelocity = -powerupXVelocity;
     }
 
+    // code for the special area to ensure it stays within bounds
     nullX += nullXVelocity;
     nullY += nullYVelocity;
 
@@ -172,6 +177,7 @@ void updateGame() {
         nullXVelocity = -nullXVelocity;
     }
 
+    // special feature that makes the special area teleport to a new place every tiem interval
     if (nullTime >= 400) {
         nullTime = 0;
         nullX = rand() % 189;
@@ -180,7 +186,9 @@ void updateGame() {
     nullTime++;
 }
 
+// updating the player
 void updatePlayer() {
+    // if player has been hit, activate immunity-frames for a set time
     if (player.iframes) {
         if (damageTime >= 80) {
             damageTime = 0;
@@ -190,6 +198,7 @@ void updatePlayer() {
         }
     }
 
+    // if player collects the power up, change their speed, appearance, abilities, and play a sound
     if (collision(player.x, player.y, player.width, player.height, powerupX, powerupY, powerupWidth, powerupHeight) && player.powered == 0) {
         player.powered = 1;
         player.speed = 2;
@@ -201,6 +210,7 @@ void updatePlayer() {
         REG_SND2FREQ = NOTE_C7 | SND_RESET;
     }
 
+    // controls for moving the player, with a direction given to tell drawPlayer() how to draw the tank
     if (BUTTON_HELD(BUTTON_LEFT) && (player.x - player.speed > -1)) {
         player.x -= player.speed;
         player.direction = 6;
@@ -213,6 +223,7 @@ void updatePlayer() {
         player.y -= player.speed;
         player.direction = 0;
 
+        // layered checks to determine if diagonal or not
         if (BUTTON_HELD(BUTTON_LEFT) && !BUTTON_HELD(BUTTON_RIGHT)) {
             player.direction = 7;
         } else if (BUTTON_HELD(BUTTON_RIGHT) && !BUTTON_HELD(BUTTON_LEFT)) {
@@ -223,6 +234,7 @@ void updatePlayer() {
         player.y += player.speed;
         player.direction = 4;
 
+        // layered checks to determine if diagonal or not
         if (BUTTON_HELD(BUTTON_LEFT) && !BUTTON_HELD(BUTTON_RIGHT)) {
             player.direction = 5;
         } else if (BUTTON_HELD(BUTTON_RIGHT) && !BUTTON_HELD(BUTTON_LEFT)) {
@@ -230,29 +242,38 @@ void updatePlayer() {
         }
     }
 
+    // checks for shooting input and makes sure player does not have a shot on screen, and that player is not in the special zone
     if (BUTTON_PRESSED(BUTTON_A) && player.fired == 0 && !collision(player.x, player.y, player.width, player.height, nullX, nullY, nullWidth, nullHeight)) {
+        // if player does not have the powerup, game keeps track of bullet fired
         if (!player.powered) {
             player.fired = 1;
         }
         newBullet(0);
 
+        // plays a bullet fired sound
         REG_SND2CNT = DMG_ENV_VOL(5) | DMG_STEP_TIME(2);
         REG_SND2FREQ = NOTE_D3 | SND_RESET;
     }
 }
 
+// update enemies
 void updateEnemies(ENEMY* e) {
     if (e->active) {
+        // if the enemy is active and has collided with player, activates the player immunity frames if not already
         if (collision(e->x, e->y, e->width, e->height, player.x, player.y, player.width, player.height)) {
             if (!player.iframes) {
+                // player gains temporary invincibility but loses a life
                 player.iframes = 1;
                 player.lives -= 1;
                 lives = player.lives;
 
+                // plays a hit sound
                 REG_SND2CNT = DMG_ENV_VOL(5) | DMG_STEP_TIME(6);
                 REG_SND2FREQ = NOTE_A2 | SND_RESET;
             } 
         }
+
+        // update the enemy position and check boundaries
         e->x += e->xVelocity;
         e->y += e->yVelocity;
 
@@ -275,10 +296,13 @@ void updateEnemies(ENEMY* e) {
     }
 }
 
+// updates bullets
 void updateBullets(BULLET* b) {
+    // if the bullet is active, loop through all active enemies to check for a collision
     if (b->active) {
         for (int i = 0; i < ENEMYCOUNT; i++) {
             if (enemies[i].active) {
+                // if there is a collision, both the enemy and the bullet are marked as erased, player score is increased
                 if (collision(b->x, b->y, b->width, b->height, enemies[i].x, enemies[i].y, enemies[i].width, enemies[i].height)) {
                     if (b->playerBullet) {
                         score++;
@@ -286,6 +310,7 @@ void updateBullets(BULLET* b) {
                         enemies[i].erased = 0;
                         player.fired = 0;
 
+                        // plays a sound when hit
                         REG_SND4CNT = DMG_ENV_VOL(5) | DMG_STEP_TIME(6);
                         REG_SND4FREQ = NOTE_C5 | SND_RESET;
                     }
@@ -294,6 +319,7 @@ void updateBullets(BULLET* b) {
                 }
             }
         }
+        // switch case that updates the bullet trajectory and checks when it hits a bound
         switch (b->direction) {
             case 0:
                 if (b->y - b->speed < 18) {
@@ -383,6 +409,7 @@ void updateBullets(BULLET* b) {
     }
 }
 
+// activates the first inactive bullet, positions it based on players aiming state
 void newBullet(int firer) {
     for (int i = 0; i < BULLETCOUNT; i++) {
         if (!bullets[i].active) {
@@ -431,6 +458,7 @@ void newBullet(int firer) {
     }
 }
 
+// draw the menu, with the blinking start instruction
 void drawStart() {
     if (time >= 40 && time < 80) {
         drawRect(59, 90, 120, 8, GRAY);
@@ -441,7 +469,7 @@ void drawStart() {
     time++;
 }
 
-// draw
+// draw game
 void drawGame() {
     drawLives();
     for (int i = 0; i < BULLETCOUNT; i++) {
@@ -451,13 +479,16 @@ void drawGame() {
         drawBullets(&bullets[i]);
     }
 
+    // draw the powerup on the screen, and if already collected, don't draw
     drawRect(powerupOldX, powerupOldY, powerupWidth, powerupHeight, GRAY);
     if (!player.powered) {
         drawRect(powerupX, powerupY, powerupWidth, powerupHeight, GREEN);
     }
 
+    // drawPlayer() is drawn last so they are above all else
     drawPlayer();
 
+    // update old positions
     nullOldX = nullX;
     nullOldY = nullY;
 
@@ -467,9 +498,13 @@ void drawGame() {
 
 void drawPlayer() {
     drawRect(player.oldX, player.oldY, player.width, player.height, GRAY);
+    // drawing the special null zone after erasing the player, but before drawing the player, will ensure that
+    // the player is drawn on top of the special zone, but also ensures that player erasing does not draw over the zone
     drawRect(nullOldX, nullOldY, nullWidth, nullHeight, GRAY);
     drawRect(nullX, nullY, nullWidth, nullHeight, TANKLIGHTWHEEL);
 
+    // every 5 frames, don't draw the player, but every other 5 frames draw the player
+    // this shows a blinking effect to indicate the invincibility duration
     if (player.iframes && (damageTime % 10) >= 5) {
 
     } else {
@@ -512,6 +547,7 @@ void drawPlayer() {
     player.oldY = player.y;
 }
 
+// draw enemy code
 void drawEnemies(ENEMY* e) {
     if (e->active) {
         drawRect(e->oldX, e->oldY, e->width, e->height, GRAY);
@@ -543,6 +579,7 @@ void drawEnemies(ENEMY* e) {
         setPixel(e->x + 7, e->y + 8, CYAN);
         e->oldX = e->x;
         e->oldY = e->y;
+    // if enemy is not set as active but is not erased, erase and set erased
     } else if (!e->erased) {
         drawRect(e->oldX, e->oldY, e->width, e->height, GRAY);
         drawRect(e->x, e->y, e->width, e->height, GRAY);
@@ -550,6 +587,7 @@ void drawEnemies(ENEMY* e) {
     }
 }
 
+// draw bullets
 void drawBullets(BULLET* b) {
     if (b->active) {
         drawRect(b->oldX, b->oldY, b->width, b->height, GRAY);
@@ -563,6 +601,7 @@ void drawBullets(BULLET* b) {
     }
 }
 
+// draw lives on the top left
 void drawLives() {
     drawRect(5, 5, 59, 8, BLACK);
     for (int i = 0; i < lives; i++) {
@@ -570,7 +609,7 @@ void drawLives() {
     }
 }
 
-// icon is 13 x 8
+// draw the tank lives icon, each icon is 13 x 8
 void drawTankIcon(int x, int y) {
     drawRect(x + 3, y, 6, 3, TANKGREEN);
     drawRect(x + 9, y + 1, 4, 1, TANKGREEN);

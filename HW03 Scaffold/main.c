@@ -97,7 +97,7 @@ void goToStart() {
 
 void start() {
     rSeed++;
-
+    // random seed provided each run
     waitForVBlank();
     drawStart();
     if (BUTTON_PRESSED(BUTTON_START)) {
@@ -115,6 +115,7 @@ void goToGame() {
 }
 
 void game() {
+    // score buffer is updated everytime and displayed on the top middle
     updateGame();
     sprintf(buffer, "%d", score);
     waitForVBlank();

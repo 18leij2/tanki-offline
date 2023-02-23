@@ -1565,6 +1565,7 @@ void goToGame() {
 }
 
 void game() {
+
     updateGame();
     sprintf(buffer, "%d", score);
     waitForVBlank();

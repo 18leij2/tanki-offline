@@ -1071,6 +1071,7 @@ void initGame() {
     accent = ((1&31) | (25&31) << 5 | (2&31) << 10);
 }
 
+
 void initPlayer() {
     player.x = 117;
     player.y = 130;
@@ -1088,6 +1089,7 @@ void initPlayer() {
     player.speed = 1;
     player.color = ((5&31) | (5&31) << 5 | (5&31) << 10);
 }
+
 
 void initEnemies() {
     for (int i; i < 5; i++) {
@@ -1125,6 +1127,7 @@ void initEnemies() {
     }
 }
 
+
 void initBullets() {
     for (int i; i < 10; i++) {
         bullets[i].x = 10 + (i * 15);
@@ -1151,6 +1154,7 @@ void updateGame() {
         updateBullets(&bullets[i]);
     }
 
+
     powerupX += powerupXVelocity;
     powerupY += powerupYVelocity;
 
@@ -1170,6 +1174,7 @@ void updateGame() {
         powerupX -= (powerupX + powerupWidth - 1) - 239;
         powerupXVelocity = -powerupXVelocity;
     }
+
 
     nullX += nullXVelocity;
     nullY += nullYVelocity;
@@ -1191,6 +1196,7 @@ void updateGame() {
         nullXVelocity = -nullXVelocity;
     }
 
+
     if (nullTime >= 400) {
         nullTime = 0;
         nullX = rand() % 189;
@@ -1199,7 +1205,9 @@ void updateGame() {
     nullTime++;
 }
 
+
 void updatePlayer() {
+
     if (player.iframes) {
         if (damageTime >= 80) {
             damageTime = 0;
@@ -1208,6 +1216,7 @@ void updatePlayer() {
             damageTime++;
         }
     }
+
 
     if (collision(player.x, player.y, player.width, player.height, powerupX, powerupY, powerupWidth, powerupHeight) && player.powered == 0) {
         player.powered = 1;
@@ -1219,6 +1228,7 @@ void updatePlayer() {
         *(volatile u16*)0x04000068 = (((5) & 15) << 12) | (((6) & 7) << 8);
         *(volatile u16*)0x0400006C = NOTE_C7 | (1<<15);
     }
+
 
     if ((~(buttons) & ((1<<5))) && (player.x - player.speed > -1)) {
         player.x -= player.speed;
@@ -1232,6 +1242,7 @@ void updatePlayer() {
         player.y -= player.speed;
         player.direction = 0;
 
+
         if ((~(buttons) & ((1<<5))) && !(~(buttons) & ((1<<4)))) {
             player.direction = 7;
         } else if ((~(buttons) & ((1<<4))) && !(~(buttons) & ((1<<5)))) {
@@ -1242,6 +1253,7 @@ void updatePlayer() {
         player.y += player.speed;
         player.direction = 4;
 
+
         if ((~(buttons) & ((1<<5))) && !(~(buttons) & ((1<<4)))) {
             player.direction = 5;
         } else if ((~(buttons) & ((1<<4))) && !(~(buttons) & ((1<<5)))) {
@@ -1249,29 +1261,38 @@ void updatePlayer() {
         }
     }
 
+
     if ((!(~(oldButtons) & ((1<<0))) && (~(buttons) & ((1<<0)))) && player.fired == 0 && !collision(player.x, player.y, player.width, player.height, nullX, nullY, nullWidth, nullHeight)) {
+
         if (!player.powered) {
             player.fired = 1;
         }
         newBullet(0);
+
 
         *(volatile u16*)0x04000068 = (((5) & 15) << 12) | (((2) & 7) << 8);
         *(volatile u16*)0x0400006C = NOTE_D3 | (1<<15);
     }
 }
 
+
 void updateEnemies(ENEMY* e) {
     if (e->active) {
+
         if (collision(e->x, e->y, e->width, e->height, player.x, player.y, player.width, player.height)) {
             if (!player.iframes) {
+
                 player.iframes = 1;
                 player.lives -= 1;
                 lives = player.lives;
+
 
                 *(volatile u16*)0x04000068 = (((5) & 15) << 12) | (((6) & 7) << 8);
                 *(volatile u16*)0x0400006C = NOTE_A2 | (1<<15);
             }
         }
+
+
         e->x += e->xVelocity;
         e->y += e->yVelocity;
 
@@ -1294,16 +1315,20 @@ void updateEnemies(ENEMY* e) {
     }
 }
 
+
 void updateBullets(BULLET* b) {
+
     if (b->active) {
         for (int i = 0; i < 5; i++) {
             if (enemies[i].active) {
+
                 if (collision(b->x, b->y, b->width, b->height, enemies[i].x, enemies[i].y, enemies[i].width, enemies[i].height)) {
                     if (b->playerBullet) {
                         score++;
                         enemies[i].active = 0;
                         enemies[i].erased = 0;
                         player.fired = 0;
+
 
                         *(volatile u16*)0x04000078 = (((5) & 15) << 12) | (((6) & 7) << 8);
                         *(volatile u16*)0x0400007C = NOTE_C5 | (1<<15);
@@ -1313,6 +1338,7 @@ void updateBullets(BULLET* b) {
                 }
             }
         }
+
         switch (b->direction) {
             case 0:
                 if (b->y - b->speed < 18) {
@@ -1402,6 +1428,7 @@ void updateBullets(BULLET* b) {
     }
 }
 
+
 void newBullet(int firer) {
     for (int i = 0; i < 10; i++) {
         if (!bullets[i].active) {
@@ -1450,6 +1477,7 @@ void newBullet(int firer) {
     }
 }
 
+
 void drawStart() {
     if (time >= 40 && time < 80) {
         drawRect(59, 90, 120, 8, ((15&31) | (15&31) << 5 | (15&31) << 10));
@@ -1470,12 +1498,15 @@ void drawGame() {
         drawBullets(&bullets[i]);
     }
 
+
     drawRect(powerupOldX, powerupOldY, powerupWidth, powerupHeight, ((15&31) | (15&31) << 5 | (15&31) << 10));
     if (!player.powered) {
         drawRect(powerupX, powerupY, powerupWidth, powerupHeight, ((0&31) | (31&31) << 5 | (0&31) << 10));
     }
 
+
     drawPlayer();
+
 
     nullOldX = nullX;
     nullOldY = nullY;
@@ -1486,8 +1517,12 @@ void drawGame() {
 
 void drawPlayer() {
     drawRect(player.oldX, player.oldY, player.width, player.height, ((15&31) | (15&31) << 5 | (15&31) << 10));
+
+
     drawRect(nullOldX, nullOldY, nullWidth, nullHeight, ((15&31) | (15&31) << 5 | (15&31) << 10));
     drawRect(nullX, nullY, nullWidth, nullHeight, ((9&31) | (9&31) << 5 | (9&31) << 10));
+
+
 
     if (player.iframes && (damageTime % 10) >= 5) {
 
@@ -1531,6 +1566,7 @@ void drawPlayer() {
     player.oldY = player.y;
 }
 
+
 void drawEnemies(ENEMY* e) {
     if (e->active) {
         drawRect(e->oldX, e->oldY, e->width, e->height, ((15&31) | (15&31) << 5 | (15&31) << 10));
@@ -1562,12 +1598,14 @@ void drawEnemies(ENEMY* e) {
         (videoBuffer[((e->y + 8) * (240) + (e->x + 7))] = ((0&31) | (31&31) << 5 | (31&31) << 10));
         e->oldX = e->x;
         e->oldY = e->y;
+
     } else if (!e->erased) {
         drawRect(e->oldX, e->oldY, e->width, e->height, ((15&31) | (15&31) << 5 | (15&31) << 10));
         drawRect(e->x, e->y, e->width, e->height, ((15&31) | (15&31) << 5 | (15&31) << 10));
         e->erased = 1;
     }
 }
+
 
 void drawBullets(BULLET* b) {
     if (b->active) {
@@ -1581,6 +1619,7 @@ void drawBullets(BULLET* b) {
         b->erased = 1;
     }
 }
+
 
 void drawLives() {
     drawRect(5, 5, 59, 8, ((0&31) | (0&31) << 5 | (0&31) << 10));
